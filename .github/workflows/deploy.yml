@@ -1,9 +1,7 @@
 name: Build and deploy JAR app to Azure Web App - meditrack-gateway
 
+# Oracle VM is the active deployment target. Run this workflow manually only if you use Azure.
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:

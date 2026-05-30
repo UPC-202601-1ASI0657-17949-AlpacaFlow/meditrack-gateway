@@ -1,0 +1,40 @@
+name: Deploy Gateway to Oracle VM
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -e
+          DEPLOY_USER="$(printf '%s' "$DEPLOY_USER" | tr -d '[:space:]')"
+          DEPLOY_HOST="$(printf '%s' "$DEPLOY_HOST" | tr -d '[:space:]')"
+          if [ -z "$DEPLOY_USER" ] || [ -z "$DEPLOY_HOST" ]; then
+            echo "DEPLOY_USER and DEPLOY_HOST must be set in repository secrets"
+            exit 1
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -o IdentitiesOnly=yes \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            'set -e
+             cd ~/meditrack-gateway
+             git fetch origin
+             git reset --hard origin/main
+             docker compose down
+             docker compose up -d --build
+             docker compose ps'

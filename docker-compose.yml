@@ -1,0 +1,42 @@
+services:
+  gateway-service:
+    build: .
+    image: meditrack-gateway:latest
+    container_name: gateway
+    restart: unless-stopped
+    expose:
+      - "8088"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 8088
+      IAM_SERVICE_URL: ${IAM_SERVICE_URL}
+      ORGANIZATION_SERVICE_URL: ${ORGANIZATION_SERVICE_URL}
+      GATEWAY_CORS_ORIGINS: ${GATEWAY_CORS_ORIGINS}
+    networks:
+      - meditrack-gateway-net
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: gateway-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - meditrack-gateway-net
+    depends_on:
+      - gateway-service
+
+networks:
+  meditrack-gateway-net:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

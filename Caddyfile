@@ -1,0 +1,8 @@
+# Public HTTPS via Let's Encrypt (automatic with Caddy).
+# Internal traffic to the gateway stays HTTP on the Docker network.
+{$DOMAIN} {
+	reverse_proxy gateway-service:8088 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+	}
+}

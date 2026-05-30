@@ -2,6 +2,7 @@ package com.alpacaflow.meditrack.meditrackgateway.infrastructure.gateway;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.route.RouteLocator;
+import org.springframework.cloud.gateway.route.builder.GatewayFilterSpec;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +17,20 @@ public class GatewayRoutesConfiguration {
     private static final String ORGANIZATION_BREAKER = "organizationCircuitBreaker";
     private static final String IAM_FALLBACK = "forward:/fallback/iam";
     private static final String ORGANIZATION_FALLBACK = "forward:/fallback/organization";
+
+    /**
+     * Browser CORS is handled by the gateway. Strip CORS request headers before proxying to
+     * Organization so its CorsFilter does not reject allowed frontend origins twice.
+     */
+    private GatewayFilterSpec organizationFilters(GatewayFilterSpec filters) {
+        return filters
+                .removeRequestHeader("Origin")
+                .removeRequestHeader("Access-Control-Request-Method")
+                .removeRequestHeader("Access-Control-Request-Headers")
+                .circuitBreaker(c -> c
+                        .setName(ORGANIZATION_BREAKER)
+                        .setFallbackUri(ORGANIZATION_FALLBACK));
+    }
 
     @Bean
     public RouteLocator meditrackRoutes(
@@ -43,33 +58,23 @@ public class GatewayRoutesConfiguration {
                         .uri(iamUrl))
                 .route("organization-organizations", r -> r
                         .path("/api/v1/organizations/**")
-                        .filters(f -> f.circuitBreaker(c -> c
-                                .setName(ORGANIZATION_BREAKER)
-                                .setFallbackUri(ORGANIZATION_FALLBACK)))
+                        .filters(this::organizationFilters)
                         .uri(organizationUrl))
                 .route("organization-admins", r -> r
                         .path("/api/v1/admins/**")
-                        .filters(f -> f.circuitBreaker(c -> c
-                                .setName(ORGANIZATION_BREAKER)
-                                .setFallbackUri(ORGANIZATION_FALLBACK)))
+                        .filters(this::organizationFilters)
                         .uri(organizationUrl))
                 .route("organization-doctors", r -> r
                         .path("/api/v1/doctors/**")
-                        .filters(f -> f.circuitBreaker(c -> c
-                                .setName(ORGANIZATION_BREAKER)
-                                .setFallbackUri(ORGANIZATION_FALLBACK)))
+                        .filters(this::organizationFilters)
                         .uri(organizationUrl))
                 .route("organization-caregivers", r -> r
                         .path("/api/v1/caregivers/**")
-                        .filters(f -> f.circuitBreaker(c -> c
-                                .setName(ORGANIZATION_BREAKER)
-                                .setFallbackUri(ORGANIZATION_FALLBACK)))
+                        .filters(this::organizationFilters)
                         .uri(organizationUrl))
                 .route("organization-senior-citizens", r -> r
                         .path("/api/v1/senior-citizens/**")
-                        .filters(f -> f.circuitBreaker(c -> c
-                                .setName(ORGANIZATION_BREAKER)
-                                .setFallbackUri(ORGANIZATION_FALLBACK)))
+                        .filters(this::organizationFilters)
                         .uri(organizationUrl))
                 .build();
     }

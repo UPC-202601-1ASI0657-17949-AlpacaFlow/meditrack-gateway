@@ -15,8 +15,10 @@ public class GatewayRoutesConfiguration {
 
     private static final String IAM_BREAKER = "iamCircuitBreaker";
     private static final String ORGANIZATION_BREAKER = "organizationCircuitBreaker";
+    private static final String RELATIVES_BREAKER = "relativesCircuitBreaker";
     private static final String IAM_FALLBACK = "forward:/fallback/iam";
     private static final String ORGANIZATION_FALLBACK = "forward:/fallback/organization";
+    private static final String RELATIVES_FALLBACK = "forward:/fallback/relatives";
 
     /**
      * Browser CORS is handled by the gateway. Strip CORS request headers before proxying to
@@ -32,11 +34,22 @@ public class GatewayRoutesConfiguration {
                         .setFallbackUri(ORGANIZATION_FALLBACK));
     }
 
+    private GatewayFilterSpec relativesFilters(GatewayFilterSpec filters) {
+        return filters
+                .removeRequestHeader("Origin")
+                .removeRequestHeader("Access-Control-Request-Method")
+                .removeRequestHeader("Access-Control-Request-Headers")
+                .circuitBreaker(c -> c
+                        .setName(RELATIVES_BREAKER)
+                        .setFallbackUri(RELATIVES_FALLBACK));
+    }
+
     @Bean
     public RouteLocator meditrackRoutes(
             RouteLocatorBuilder builder,
             @Value("${services.iam.url}") String iamUrl,
-            @Value("${services.organization.url}") String organizationUrl) {
+            @Value("${services.organization.url}") String organizationUrl,
+            @Value("${services.relatives.url}") String relativesUrl) {
         return builder.routes()
                 .route("iam-authentication", r -> r
                         .path("/api/v1/authentication/**")
@@ -76,6 +89,10 @@ public class GatewayRoutesConfiguration {
                         .path("/api/v1/senior-citizens/**")
                         .filters(this::organizationFilters)
                         .uri(organizationUrl))
+                .route("relatives", r -> r
+                        .path("/api/v1/relatives/**")
+                        .filters(this::relativesFilters)
+                        .uri(relativesUrl))
                 .build();
     }
 }

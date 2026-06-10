@@ -50,6 +50,17 @@ public class FallbackController {
         );
     }
 
+    @RequestMapping(
+            value = "/clinical",
+            method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH}
+    )
+    public ResponseEntity<Map<String, Object>> clinicalFallback() {
+        return serviceUnavailable(
+                "Clinical",
+                "Clinical service is temporarily unavailable. Please try again later."
+        );
+    }
+
     private static ResponseEntity<Map<String, Object>> serviceUnavailable(String service, String detail) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("type", "about:blank");

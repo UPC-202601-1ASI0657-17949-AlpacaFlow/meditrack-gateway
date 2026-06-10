@@ -15,9 +15,11 @@ public class GatewayRoutesConfiguration {
 
     private static final String IAM_BREAKER = "iamCircuitBreaker";
     private static final String ORGANIZATION_BREAKER = "organizationCircuitBreaker";
+    private static final String CLINICAL_BREAKER = "clinicalCircuitBreaker";
     private static final String RELATIVES_BREAKER = "relativesCircuitBreaker";
     private static final String IAM_FALLBACK = "forward:/fallback/iam";
     private static final String ORGANIZATION_FALLBACK = "forward:/fallback/organization";
+    private static final String CLINICAL_FALLBACK = "forward:/fallback/clinical";
     private static final String RELATIVES_FALLBACK = "forward:/fallback/relatives";
 
     /**
@@ -44,12 +46,23 @@ public class GatewayRoutesConfiguration {
                         .setFallbackUri(RELATIVES_FALLBACK));
     }
 
+    private GatewayFilterSpec clinicalFilters(GatewayFilterSpec filters) {
+        return filters
+                .removeRequestHeader("Origin")
+                .removeRequestHeader("Access-Control-Request-Method")
+                .removeRequestHeader("Access-Control-Request-Headers")
+                .circuitBreaker(c -> c
+                        .setName(CLINICAL_BREAKER)
+                        .setFallbackUri(CLINICAL_FALLBACK));
+    }
+
     @Bean
     public RouteLocator meditrackRoutes(
             RouteLocatorBuilder builder,
             @Value("${services.iam.url}") String iamUrl,
             @Value("${services.organization.url}") String organizationUrl,
-            @Value("${services.relatives.url}") String relativesUrl) {
+            @Value("${services.relatives.url}") String relativesUrl,
+            @Value("${services.clinical.url}") String clinicalUrl) {
         return builder.routes()
                 .route("iam-authentication", r -> r
                         .path("/api/v1/authentication/**")
@@ -93,6 +106,14 @@ public class GatewayRoutesConfiguration {
                         .path("/api/v1/relatives/**")
                         .filters(this::relativesFilters)
                         .uri(relativesUrl))
+                .route("clinical-medical-records", r -> r
+                        .path("/api/v1/medical-records/**")
+                        .filters(this::clinicalFilters)
+                        .uri(clinicalUrl))
+                .route("clinical-patient-thresholds", r -> r
+                        .path("/api/v1/patient-thresholds/**")
+                        .filters(this::clinicalFilters)
+                        .uri(clinicalUrl))
                 .build();
     }
 }

@@ -135,6 +135,10 @@ public class GatewayRoutesConfiguration {
                         .path("/api/v1/alerts/**")
                         .filters(this::devicesFilters)
                         .uri(devicesUrl))
+                .route("devices-audit-logs", r -> r
+                        .path("/api/v1/audit-logs/**")
+                        .filters(this::devicesFilters)
+                        .uri(devicesUrl))
                 .build();
     }
 }
